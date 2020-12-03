@@ -5,7 +5,11 @@ import torch
 import sklearn
 from collections import deque
 import random
+import sklearn.ensemble
+import sklearn.tree
 from math import sqrt
+from sklearn.exceptions import NotFittedError
+import sklearn.multioutput
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -132,40 +136,33 @@ class Car():
         self.__init__()
 
 ################################
-# NN Q-learning implementation #
+# Trees Q-learning implementation #
 ################################
-torch.manual_seed(0)
-
-loss = torch.nn.MSELoss()
-
-nn_model = torch.nn.Sequential(
-    torch.nn.Linear(4,32),
-    torch.nn.ReLU(),
-    torch.nn.Linear(32,32),
-    torch.nn.ReLU(),
-    torch.nn.Linear(32,3),
-)
-
-EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.995
+EXPLORATION_MIN = 1
+EXPLORATION_DECAY = 0.96
 BATCH_SIZE = 32
 GAMMA = 0.95
 
 exploration_rate = 1
-memory = deque(maxlen=1000000)
-nn_model_optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.001)
+memory = deque(maxlen=1000)
+
+forest = sklearn.ensemble.GradientBoostingRegressor(n_estimators=100,random_state=0)
+classifier = sklearn.multioutput.MultiOutputRegressor(forest)
 
 def select_action(state):
     global exploration_rate
+    
     if np.random.rand() < exploration_rate:
-        return random.randint(0,2)
-    state = torch.from_numpy(np.array(state, dtype=np.float32)) 
-    q_values = nn_model(state)
-    return torch.argmax(q_values).item()
+        action = random.randint(0,2)
+        return action
+    try:
+        q_values = classifier.predict(state)
+        return np.argmax(q_values)
+    except NotFittedError as e:
+        return 0
 
 def remember(last_state,action,reward,next_state,done):
     global memory
-    print(last_state,action,reward,next_state,done)
     memory.append((last_state,action,reward,next_state,done))
 
 def experience_replay():
@@ -174,23 +171,36 @@ def experience_replay():
     if len(memory) < BATCH_SIZE:
         return
 
-    batch = random.sample(memory,BATCH_SIZE)
+#     batch = random.sample(memory,BATCH_SIZE)
+    batch = memory
+    
+    X = np.empty((0,4))
+    y = np.empty((0,3))
     for last_state, action, reward, next_state, done in batch:
         q_update = reward
         if not done:
-            q_update = (reward + GAMMA * torch.amax(nn_model(torch.from_numpy(np.array(next_state, dtype=np.float32)))).item())
-        print(last_state)    
-        q_values = nn_model(torch.from_numpy(np.array(last_state, dtype=np.float32)))
-        q_values[action] = q_update
+            try:
+                q_update = (reward + GAMMA * np.amax(classifier.predict(np.array(next_state, dtype=np.float32).reshape(1, -1))))
+            except NotFittedError as e:
+                q_update = reward 
+        try:
+            #print(classifier.predict(np.array(last_state, dtype=np.float32)))
+            q_values = classifier.predict(np.array(last_state, dtype=np.float32).reshape(1, -1))
+        except NotFittedError as e:
+            q_values = np.zeros(3, dtype=np.float32).reshape(1, -1)
+        print(q_values)
+        q_values[0][action] = q_update
         
-        #fit
-        l = loss(nn_model(torch.from_numpy(np.array(last_state, dtype=np.float32))), q_values)
-        nn_model.zero_grad()
-        l.backward()
-        nn_model_optimizer.step()
+        X = np.append(X,np.array([last_state]),axis=0)
+        y = np.append(y,np.array([q_values[0]]),axis=0)
+    
+    #fit
+    classifier.fit(X,y)
     
     if exploration_rate > EXPLORATION_MIN:
         exploration_rate *= EXPLORATION_DECAY
+
+##training
 
 pygame.init()
  
