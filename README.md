@@ -15,5 +15,10 @@ Our project uses synthetic data from OpenAI Gym (https://gym.openai.com/envs/Car
 - GPU not required
 - Each notebook is independent (leads to some code repeat, but allows to train in parallel and was generally more convenient)
 
+## Reproducibility
+- See ./environment.yaml for the conda environment used
+- Random seeds were not set because environments are inherently random (random actions are taken to build memory). Setting a random seed would not have helped reproducibility in any way.
+- Because of the inherent stochasticity, not all runs will look exactly the same, but overall trends should persist.
+
 ### References
 - General inspiration: https://towardsdatascience.com/reinforcement-learning-q-learning-with-decision-trees-ecb1215d9131
