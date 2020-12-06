@@ -4,8 +4,8 @@ Our project uses synthetic data from OpenAI Gym (https://gym.openai.com/envs/Car
 
 ## Files
 
-- ./pendulum-q-learning-nn.ipynb -> training and results for OpenAI pendulum using Neural Networks
-- ./pendulum-q-learning-tree.ipynb -> training and results for OpenAI pendulum using LightGBM
+- ./cartpole-q-learning-nn.ipynb -> training and results for OpenAI CartPole using Neural Networks
+- ./cartpole-q-learning-tree.ipynb -> training and results for OpenAI CartPole using LightGBM
 - ./custom-car-q-learning-nn.ipynb -> training and results for custom car environment using Neural Networks
 - ./custom-car-q-learning-tree.ipynb -> training and results for custom car environment using LightGBM
 
